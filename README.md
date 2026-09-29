@@ -6,18 +6,16 @@ Payana Mitra is a personalized trip-planning web application. It helps traveller
 
 ## Current status
 
-The initial frontend is complete for:
+The app is connected end to end:
 
 - Landing page
-- Login page
-- Signup page
-- Personalized dashboard layout
-- Left navigation sidebar
-- Chat prompt interface
-- Responsive mobile layout
-- Forest + Ocean visual system
-
-Authentication and AI calls are currently frontend placeholders. The next phase will connect Better Auth, Neon Postgres, OpenRouter, and Groq.
+- Email/password signup and login with Better Auth
+- Neon Postgres session and application data storage
+- Protected personalized dashboard
+- Streaming travel chat with persisted conversations
+- OpenRouter as the primary AI provider
+- Groq as the fallback AI provider
+- Trip history in the dashboard sidebar
 
 ## Tech stack
 
@@ -39,6 +37,9 @@ Authentication and AI calls are currently frontend placeholders. The next phase 
 
 - Node.js 20 or newer
 - npm
+- A Neon Postgres database
+- An OpenRouter API key and model ID
+- A Groq API key and model ID
 
 Install dependencies:
 
@@ -50,6 +51,14 @@ Copy the environment template:
 
 ```bash
 cp .env.example .env.local
+```
+
+`BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` must be the URL of your own app, not a Neon Auth endpoint. For local development both should be `http://localhost:3000`.
+
+Push the database schema to Neon:
+
+```bash
+npm run db:push
 ```
 
 Start the development server:
@@ -96,33 +105,41 @@ Keep `.env.local` private. Never commit API keys, database credentials, or Bette
 
 ```text
 app/
-├── page.tsx                 # Landing page
-├── login/
-│   └── page.tsx              # Login page
-├── signup/
-│   └── page.tsx              # Signup page
+├── api/
+│   ├── auth/[...all]/route.ts  # Better Auth handler
+│   └── chat/route.ts           # Authenticated AI chat endpoint
+├── login/page.tsx
+├── signup/page.tsx
 ├── dashboard/
-│   └── page.tsx              # Dashboard route
-├── globals.css               # Shared design system and responsive styles
-└── layout.tsx                # Root layout and metadata
+│   ├── layout.tsx              # Session-protected dashboard shell
+│   └── page.tsx
+├── globals.css
+└── layout.tsx
 
 components/
-├── auth-form.tsx              # Login/signup frontend form
-└── dashboard.tsx              # Dashboard interface and chat prototype
+├── auth-form.tsx
+└── dashboard.tsx
+
+lib/
+├── ai.ts                       # OpenRouter + Groq provider chain
+├── auth.ts                     # Better Auth server instance
+├── auth-client.ts              # Better Auth browser client
+├── db.ts                       # Neon + Drizzle connection
+└── schema.ts                   # Auth, conversation, and itinerary tables
 ```
 
 ## Design system
 
-The frontend follows the Forest + Ocean direction from the Payana Mitra colour schema.
+The frontend follows the **Desert Heritage** direction from the Payana Mitra colour schema: royal, warm, and cultural, inspired by Indian architecture, desert landscapes, and royal destinations.
 
 ### Core colours
 
 ```text
-Ink:     #202827
-Paper:   #F7F5EE
-Forest:  #164A3A
-Ocean:   #357A8A
-Accent:  #D4773C
+Text:      #292522
+Background:#FBF3E3
+Primary:   #3A2418
+Secondary: #B85C38
+Accent:    #D49A32
 ```
 
 ### Typography
@@ -136,31 +153,46 @@ Accent:  #D4773C
 - Calm, structured layouts
 - Large but readable serif headings
 - Subtle borders instead of excessive shadows
-- Forest green for primary navigation and actions
-- Ocean blue for secondary and informational elements
-- Accent orange used sparingly for memorable interactions
+- Deep brown for primary navigation, sidebars, and actions
+- Terracotta for secondary and informational elements
+- Heritage gold used sparingly for memorable interactions
 - Mobile-first responsive behavior
 
-## Planned backend flow
+## Backend flow
 
-1. Connect Better Auth to the Next.js route handlers.
-2. Connect Better Auth to Neon Postgres.
-3. Add database tables for users, sessions, preferences, conversations, messages, and itineraries.
-4. Protect `/dashboard` with a server-side session check.
-5. Add a server-only `/api/chat` route.
-6. Use OpenRouter as the primary provider.
-7. Fall back to Groq when the primary provider is unavailable.
-8. Persist chat conversations and generated itineraries.
-9. Deploy the frontend and backend to Vercel.
+1. Better Auth handles signup, login, sessions, and cookies.
+2. Neon Postgres stores users, sessions, conversations, messages, itineraries, and preferences.
+3. `app/dashboard/layout.tsx` redirects unauthenticated visitors to `/login`.
+4. `POST /api/chat` verifies the session, persists the user message, and streams the assistant reply.
+5. OpenRouter is called first. If it is missing, misconfigured, rate limited, or unavailable, the request automatically falls back to Groq.
+6. The active provider is returned in the `X-AI-Provider` response header.
+7. `GET /api/chat` returns the trip history. `GET /api/chat?conversationId=...` returns one conversation.
 
 ## Scripts
 
 ```bash
-npm run dev      # Start the development server
-npm run build    # Create a production build
-npm run start    # Start the production server
-npm run lint     # Run linting when configured
+npm run dev         # Start the development server
+npm run build       # Create a production build
+npm run start       # Start the production server
+npm run lint        # Run linting when configured
+npm run db:push     # Push the Drizzle schema to Postgres
+npm run db:generate # Generate SQL migration files
+npm run db:studio   # Open Drizzle Studio
 ```
+
+## AI provider configuration
+
+Both providers need a key and a model ID. Placeholder values such as `replace-with-...` are treated as unconfigured and are skipped, so a placeholder `OPENROUTER_MODEL` means Groq handles the request.
+
+```env
+OPENROUTER_API_KEY=sk-or-v1-...
+OPENROUTER_MODEL=provider/model-id
+
+GROQ_API_KEY=gsk_...
+GROQ_MODEL=llama-3.3-70b-versatile
+```
+
+Find an exact OpenRouter model ID at <https://openrouter.ai/models> and a Groq model ID at <https://console.groq.com/docs/models>.
 
 ## Deployment
 

@@ -1,5 +1,11 @@
 import Link from "next/link";
 
+const team = [
+  { name: "Divyanshu", initials: "D" },
+  { name: "Pratyush", initials: "P" },
+  { name: "Adnan", initials: "A" },
+];
+
 export default function Home() {
   return (
     <main>
@@ -141,18 +147,61 @@ export default function Home() {
           </Link>
         </div>
       </section>
-      <footer
-        className="container"
-        style={{
-          padding: "28px 0",
-          color: "var(--muted)",
-          fontSize: "12px",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
-        <span>© 2026 Payana Mitra</span>
-        <span>Travel thoughtfully.</span>
+      <footer className="footer">
+        <div className="container">
+          <div className="footer-top">
+            <div className="footer-lead">
+              <img
+                className="footer-logo"
+                src="/brand/payana-mitra-logo.png"
+                alt="Payana"
+              />
+              <p className="footer-tagline serif">
+                A long way is only worth taking
+                <br />
+                if it feels like your own.
+              </p>
+              <div className="footer-actions">
+                <Link href="/signup" className="btn btn-primary">
+                  Plan a trip
+                </Link>
+                <Link href="/login" className="btn btn-outline-light">
+                  Log in
+                </Link>
+              </div>
+            </div>
+
+            <div className="footer-col">
+              <span className="footer-label">Explore</span>
+              <a href="#how">How it works</a>
+              <a href="#why">Why Payana</a>
+              <a href="#stories">Stories</a>
+            </div>
+
+            <div className="footer-col">
+              <span className="footer-label">Company</span>
+              <a href="#">About</a>
+              <a href="#">Contact</a>
+              <a href="#">Privacy</a>
+            </div>
+
+            <div className="footer-team">
+              <span className="footer-label">Built by</span>
+              {team.map((member) => (
+                <div className="member" key={member.name}>
+                  <span className="member-mark">{member.initials}</span>
+                  <span className="member-name">{member.name}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <span>© 2026 Payana Mitra</span>
+            <span className="footer-route" aria-hidden="true" />
+            <span>Travel thoughtfully.</span>
+          </div>
+        </div>
       </footer>
     </main>
   );
