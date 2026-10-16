@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Brand from "@/components/brand";
 
 const team = [
   { name: "Divyanshu", initials: "D" },
@@ -11,38 +12,62 @@ export default function Home() {
     <main>
       <div className="container">
         <nav className="nav">
-          <Link href="/" className="brand" aria-label="Payana Mitra home">
-            <img
-              className="brand-logo"
-              src="/brand/payana-mitra-logo.png"
-              alt="Payana"
-            />
-          </Link>
+          <Brand size={40} />
           <div className="navlinks">
             <a href="#how">How it works</a>
-            <a href="#why">Why Payana</a>
+            <a href="#why">Why Payana Trails</a>
             <a href="#stories">Stories</a>
           </div>
           <div className="nav-actions">
             <Link href="/login" className="login-link">
               Log in
             </Link>
-            <Link href="/signup" className="btn btn-primary">
-              Start planning
+            <Link href="/login" className="btn btn-primary">
+              Sign in
             </Link>
           </div>
         </nav>
       </div>
+      <section className="hero-photo">
+        <picture>
+          <source
+            media="(min-width: 640px)"
+            srcSet="/images/hero/trails-hero.webp"
+          />
+          <img
+            src="/images/hero/trails-hero-mobile.webp"
+            alt="A calm mountain lake ringed with snow-capped peaks"
+          />
+        </picture>
+        <div className="hero-photo-inner container">
+          <div className="eyebrow hero-eyebrow">Journeys, thoughtfully curated</div>
+          <h1 className="serif">
+            Curated Journeys for Travellers who value{" "}
+            <em>Stories over Sightseeing</em>
+          </h1>
+          <p className="hero-sub">
+            Small groups. Deeper experiences. Journeys, thoughtfully curated!
+          </p>
+          <div className="hero-actions">
+            <Link href="/signup" className="btn btn-hero">
+              Start your journey
+            </Link>
+            <Link href="/login" className="btn btn-hero-ghost">
+              Sign in
+            </Link>
+          </div>
+        </div>
+      </section>
       <section className="container hero">
         <div>
           <div className="eyebrow">Your personal travel companion</div>
-          <h1 className="serif">
+          <h2 className="serif">
             Go further.
             <br />
             <em>Plan smarter.</em>
-          </h1>
+          </h2>
           <p className="hero-copy">
-            Payana Mitra turns the way you travel into a trip that actually
+            Payana Trails turns the way you travel into a trip that actually
             feels like yours — thoughtful routes, local textures, and plans that
             leave room for the unexpected.
           </p>
@@ -64,7 +89,7 @@ export default function Home() {
         >
           <img
             className="scene-illustration"
-            src="/illustrations/empty-state.png"
+            src="/illustrations/empty-state.webp"
             alt="A folded travel map beside a backpack"
           />
           <span className="route" />
@@ -99,7 +124,7 @@ export default function Home() {
             </h2>
           </div>
           <p className="section-intro">
-            Tell us how you like to travel. Payana brings the context, care, and
+            Tell us how you like to travel. Payana Trails brings the context, care, and
             local knowledge to shape a plan around it.
           </p>
         </div>
@@ -142,7 +167,7 @@ export default function Home() {
       <section className="cta" id="stories">
         <div className="container cta-inner">
           <h2>Ready to travel on your terms?</h2>
-          <Link href="/signup" className="btn">
+          <Link href="/login" className="btn">
             Start your journey
           </Link>
         </div>
@@ -151,18 +176,14 @@ export default function Home() {
         <div className="container">
           <div className="footer-top">
             <div className="footer-lead">
-              <img
-                className="footer-logo"
-                src="/brand/payana-mitra-logo.png"
-                alt="Payana"
-              />
+              <Brand size={44} tone="light" />
               <p className="footer-tagline serif">
                 A long way is only worth taking
                 <br />
                 if it feels like your own.
               </p>
               <div className="footer-actions">
-                <Link href="/signup" className="btn btn-primary">
+                <Link href="/login" className="btn btn-primary">
                   Plan a trip
                 </Link>
                 <Link href="/login" className="btn btn-outline-light">
@@ -174,7 +195,7 @@ export default function Home() {
             <div className="footer-col">
               <span className="footer-label">Explore</span>
               <a href="#how">How it works</a>
-              <a href="#why">Why Payana</a>
+              <a href="#why">Why Payana Trails</a>
               <a href="#stories">Stories</a>
             </div>
 
@@ -197,7 +218,7 @@ export default function Home() {
           </div>
 
           <div className="footer-bottom">
-            <span>© 2026 Payana Mitra</span>
+            <span>© 2026 Payana Trails</span>
             <span className="footer-route" aria-hidden="true" />
             <span>Travel thoughtfully.</span>
           </div>

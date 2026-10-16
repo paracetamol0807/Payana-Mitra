@@ -2,221 +2,193 @@
 
 > Travel, thoughtfully planned.
 
-Payana Mitra is a personalized trip-planning web application. It helps travellers create itineraries around their preferences, budget, pace, and travel style instead of relying on generic destination lists.
+Payana Mitra is a personalized trip-planning web application. Coordinators
+author trips and itineraries; travellers sign in to see the trips they are
+booked on, follow the day-by-day plan, and leave feedback.
 
-## Current status
+## Stack
 
-The app is connected end to end:
-
-- Landing page
-- Email/password signup and login with Better Auth
-- Neon Postgres session and application data storage
-- Protected personalized dashboard
-- Streaming travel chat with persisted conversations
-- OpenRouter as the primary AI provider
-- Groq as the fallback AI provider
-- Trip history in the dashboard sidebar
-
-## Tech stack
-
-- Next.js 16
-- React 19
-- TypeScript
-- Tailwind-ready frontend architecture
-- CSS variables and shared design tokens
-- Better Auth — planned
-- Neon Postgres — planned
-- Drizzle ORM — planned
-- OpenRouter — primary AI provider
-- Groq — fallback AI provider
-- Vercel — planned deployment platform
+- Next.js 16, React 19, TypeScript
+- Supabase (Postgres + Auth + Row Level Security)
+- Server-side AES-256-GCM encryption for guest documents
+- Vercel for deployment
 
 ## Getting started
 
-### Requirements
+### 1. Create a Supabase project and apply the migrations
 
-- Node.js 20 or newer
-- npm
-- A Neon Postgres database
-- An OpenRouter API key and model ID
-- A Groq API key and model ID
+See **[SUPABASE_SETUP.md](./SUPABASE_SETUP.md)** for the full walkthrough. In
+short: create a project, then run the four files in `supabase-migrations/` in
+order through the SQL Editor.
 
-Install dependencies:
-
-```bash
-npm install
-```
-
-Copy the environment template:
+### 2. Configure the environment
 
 ```bash
 cp .env.example .env.local
 ```
 
-`BETTER_AUTH_URL` and `NEXT_PUBLIC_APP_URL` must be the URL of your own app, not a Neon Auth endpoint. For local development both should be `http://localhost:3000`.
-
-Push the database schema to Neon:
-
-```bash
-npm run db:push
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=<anon key>
+SUPABASE_SERVICE_ROLE_KEY=<service role key>
+ENCRYPTION_KEY=<openssl rand -base64 32>
 ```
 
-Start the development server:
+> `ENCRYPTION_KEY` is the name the backend uses. `DOCUMENT_ENCRYPTION_KEY` is
+> still accepted as a fallback.
+
+### 3. Install and run
 
 ```bash
+npm install
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) in your browser.
+### 4. Create the first administrator
 
-## Available routes
-
-| Route | Description |
-| --- | --- |
-| `/` | Payana Mitra landing page |
-| `/login` | Login interface |
-| `/signup` | Account creation interface |
-| `/dashboard` | Personalized trip-planning dashboard prototype |
-
-## Environment variables
-
-All environment variables are documented in `.env.example`.
-
-```env
-NEXT_PUBLIC_APP_URL=http://localhost:3000
-
-BETTER_AUTH_SECRET=replace-with-a-long-random-secret
-BETTER_AUTH_URL=http://localhost:3000
-
-DATABASE_URL=postgresql://USER:PASSWORD@HOST/DATABASE?sslmode=require
-
-OPENROUTER_API_KEY=replace-with-your-openrouter-api-key
-# Required when the AI integration is enabled.
-# Use an exact model ID listed at https://openrouter.ai/models
-OPENROUTER_MODEL=replace-with-an-openrouter-model-id
-
-GROQ_API_KEY=replace-with-your-groq-api-key
-GROQ_MODEL=replace-with-your-groq-model-id
+```bash
+npm run admin:create -- your@email.com
 ```
 
-Keep `.env.local` private. Never commit API keys, database credentials, or Better Auth secrets.
+Sign up at `/signup` first, then promote that account.
+
+## Routes
+
+| Route | Who | Purpose |
+| --- | --- | --- |
+| `/` | Public | Landing page |
+| `/signup` | Public | Self-registration |
+| `/login` | Public | Sign-in (phone + PIN) |
+| `/change-password` | Signed in | Forced password reset |
+| `/dashboard` | Traveller | Trips they are booked on |
+| `/dashboard/trips/[id]` | Member | Itinerary, activities, contacts |
+| `/dashboard/trips/[id]/feedback` | Member | Star rating and comments |
+| `/dashboard/trips/[id]/survey` | Member | End-of-tour questions |
+| `/dashboard/profile` | Traveller | Contact and travel details |
+| `/dashboard/documents` | Traveller | Encrypted PAN / passport |
+| `/dashboard/notifications` | Traveller | Coordinator updates |
+| `/admin` | Admin | Overview |
+| `/admin/users` | Admin | Accounts, roles, suspension |
+| `/admin/trips` | Admin | Trip list, create, publish |
+| `/admin/trips/[id]` | Admin | Days, activities, members, contacts |
+| `/admin/destinations` | Admin | Destination catalogue |
+| `/admin/notifications` | Admin | Send notifications |
+| `/admin/login` | Public | Administrator sign-in (phone + PIN, admin only) |
+
+## How the access model works
+
+There is no permission logic in the components. All data access is governed by
+Postgres Row Level Security:
+
+- `is_admin()` — role is admin
+- `is_trip_member(trip)` — caller appears in `trip_members`
+- `is_leader_of_trip(trip)` — caller is the trip's `leader_id`
+
+A traveller sees a trip only when **all three** hold: they are a member, the
+trip is `published`, and `is_active` is true. Admins write with the service role
+key, which bypasses RLS, so every privileged action is written to `audit_log`.
+
+## Scripts
+
+```bash
+npm run dev           # Development server
+npm run build         # Production build
+npm run start         # Production server
+npm run admin:create -- <email>   # Promote an account to admin
+```
 
 ## Project structure
 
 ```text
 app/
-├── api/
-│   ├── auth/[...all]/route.ts  # Better Auth handler
-│   └── chat/route.ts           # Authenticated AI chat endpoint
-├── login/page.tsx
-├── signup/page.tsx
-├── dashboard/
-│   ├── layout.tsx              # Session-protected dashboard shell
-│   └── page.tsx
-├── globals.css
-└── layout.tsx
-
-components/
-├── auth-form.tsx
-└── dashboard.tsx
+├── admin/
+│   ├── login/                 Outside the guard so it cannot loop
+│   └── (panel)/               Role-guarded admin area
+├── dashboard/                 Session-guarded traveller area
+├── api/                       Server routes needing the service role
+└── globals.css
 
 lib/
-├── ai.ts                       # OpenRouter + Groq provider chain
-├── auth.ts                     # Better Auth server instance
-├── auth-client.ts              # Better Auth browser client
-├── db.ts                       # Neon + Drizzle connection
-└── schema.ts                   # Auth, conversation, and itinerary tables
+├── supabase/{client,server,admin,middleware}.ts
+├── auth.ts                    getAuthUser / getProfile / requireProfile
+├── pin.ts                     Phone normalisation and PIN derivation
+├── pin-login.ts               Shared PIN verification for both sign-in routes
+├── crypto.ts                  AES-256-GCM for document numbers
+├── audit.ts                   audit_log writer
+├── types.ts                   Table types matching the migrations
+
+supabase-migrations/           001-004, apply in order
 ```
-
-## Design system
-
-The frontend follows the **Desert Heritage** direction from the Payana Mitra colour schema: royal, warm, and cultural, inspired by Indian architecture, desert landscapes, and royal destinations.
-
-### Core colours
-
-```text
-Text:      #292522
-Background:#FBF3E3
-Primary:   #3A2418
-Secondary: #B85C38
-Accent:    #D49A32
-```
-
-### Typography
-
-- `DM Serif Display` — display headings and expressive UI text
-- `Inter` — body copy, forms, navigation, and application UI
-
-### Visual principles
-
-- Destination-led storytelling
-- Calm, structured layouts
-- Large but readable serif headings
-- Subtle borders instead of excessive shadows
-- Deep brown for primary navigation, sidebars, and actions
-- Terracotta for secondary and informational elements
-- Heritage gold used sparingly for memorable interactions
-- Mobile-first responsive behavior
-
-## Backend flow
-
-1. Better Auth handles signup, login, sessions, and cookies.
-2. Neon Postgres stores users, sessions, conversations, messages, itineraries, and preferences.
-3. `app/dashboard/layout.tsx` redirects unauthenticated visitors to `/login`.
-4. `POST /api/chat` verifies the session, persists the user message, and streams the assistant reply.
-5. OpenRouter is called first. If it is missing, misconfigured, rate limited, or unavailable, the request automatically falls back to Groq.
-6. The active provider is returned in the `X-AI-Provider` response header.
-7. `GET /api/chat` returns the trip history. `GET /api/chat?conversationId=...` returns one conversation.
-
-## Scripts
-
-```bash
-npm run dev         # Start the development server
-npm run build       # Create a production build
-npm run start       # Start the production server
-npm run lint        # Run linting when configured
-npm run db:push     # Push the Drizzle schema to Postgres
-npm run db:generate # Generate SQL migration files
-npm run db:studio   # Open Drizzle Studio
-```
-
-## AI provider configuration
-
-Both providers need a key and a model ID. Placeholder values such as `replace-with-...` are treated as unconfigured and are skipped, so a placeholder `OPENROUTER_MODEL` means Groq handles the request.
-
-```env
-OPENROUTER_API_KEY=sk-or-v1-...
-OPENROUTER_MODEL=provider/model-id
-
-GROQ_API_KEY=gsk_...
-GROQ_MODEL=llama-3.3-70b-versatile
-```
-
-Find an exact OpenRouter model ID at <https://openrouter.ai/models> and a Groq model ID at <https://console.groq.com/docs/models>.
-
-## Deployment
-
-The recommended production setup is:
-
-```text
-Next.js frontend and API routes → Vercel
-Authentication and application data → Neon Postgres
-Primary AI provider → OpenRouter
-Fallback AI provider → Groq
-```
-
-Add the production environment variables in the Vercel project settings. Use a pooled Neon connection string when required by the deployment environment.
 
 ## Security notes
 
-- AI provider keys must only be used on the server.
-- Do not rename provider variables to `NEXT_PUBLIC_*`.
-- Never expose `DATABASE_URL` in client-side code.
-- Derive the authenticated user from the server session.
-- Do not trust user IDs supplied by the browser.
-- Validate all AI output before displaying or storing it.
-- Add rate limiting before launching the public production version.
+- Never expose `SUPABASE_SERVICE_ROLE_KEY` to the browser.
+- `ENCRYPTION_KEY` is unrecoverable if lost.
+- Document numbers are encrypted before storage and never returned to the client.
+- No password is ever handled by this app. Sign-in is phone + derived PIN, and
+  the resulting session is a real Supabase session governed by RLS.
+- Admin actions are recorded in `audit_log`, including admin PIN sign-ins.
+
+## Sign-in: phone number and PIN
+
+Nobody signs in with a password — travellers **and** administrators alike. Both
+enter:
+
+```text
+Phone: 98765 43210
+PIN:    4230        ← the last four digits of that number
+```
+
+The PIN is never stored. `lib/pin.ts` recomputes it from the phone number in
+`profiles` on every attempt and compares in constant time. After the check
+passes, the server issues a one-time token which the browser exchanges for a real
+Supabase session, so RLS still governs every later request.
+
+Attempts are recorded in `login_attempts` (migration 002). Five failures for a
+number inside fifteen minutes locks that number out for fifteen minutes.
+
+### Two routes, one verifier
+
+| Route | Form | Who it accepts |
+| --- | --- | --- |
+| `/login` → `POST /api/auth/pin` | `components/pin-form.tsx` | Any active account |
+| `/admin/login` → `POST /api/auth/admin-pin` | `components/admin-login-form.tsx` | `role = 'admin'` only |
+
+Both call `verifyPinLogin()` in `lib/pin-login.ts`. The admin route passes
+`requireRole: "admin"`, and the role is checked **before** the PIN is compared,
+so a traveller number cannot be probed for a valid PIN. A wrong role, a wrong
+PIN and an unregistered number all return the same message and status, so the
+endpoint cannot be used to enumerate accounts or discover who is an admin.
+
+An authenticated admin session still reads only what RLS allows. `role` is
+verified in Postgres by `is_admin()`, not by the client.
+
+**This is weak authentication and should be treated as such.** The PIN is
+derivable from the phone number, and the phone number is the identifier, so
+anyone holding a member list can sign in as any member — including an admin. If
+that matters, replace the derived PIN with a randomly generated 4 to 6 digit code
+in a new column, or send one-time codes over SMS instead.
+
+## Design system
+
+Taken from the live brand at [payanatrails.com](https://payanatrails.com/).
+
+```text
+Primary brown:  #4A3B2A   text, dark surfaces, nav
+Cream:          #F3EFE9   page background
+Tan accent:     #D4A373   highlights, hover, badges
+Secondary:      #8B6B50   muted text, borders on dark
+Hairline:       #E3D5C4   card and table borders
+Card white:     #FDFBF9
+```
+
+Type: **Lato** for interface text, a serif display stack for headings. Buttons
+and nav pills are fully rounded. Cards use a 16px radius with a hairline border
+rather than heavy shadows.
+
+The illustrated circular badge, the hero photograph, and the wordmark lockup
+are all sourced from the live site.
 
 ## License
 
-This project is currently private and intended for the Payana Mitra team.
+Private project for the Payana Mitra team.
